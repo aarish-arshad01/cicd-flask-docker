@@ -1,34 +1,41 @@
-name: Docker Flask CI
+name: Docker Flask AWS EB Deploy
 
 on:
   push:
     branches:
       - main
-  pull_request:
 
 jobs:
-  docker-test:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Build Docker image
-        run: docker build -t flask-app .
-
-      - name: Run Docker container
+      - name: Install AWS CLI
         run: |
-          docker run -d -p 5000:5000 --name flask-container flask-app
-          sleep 5
+          pip install awscli
+          aws --version
 
-      - name: Test app endpoint
-        run: curl --fail http://localhost:5000
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Stop and remove container
+      - name: Zip application
+        run: zip -r flask-docker-eb.zip app.py requirements.txt Dockerfile
+
+      - name: Deploy to Elastic Beanstalk
         run: |
-          docker stop flask-container
-          docker rm flask-container
+          aws elasticbeanstalk create-application-version \
+            --application-name ${{ secrets.EB_APPLICATION_NAME }} \
+            --version-label v-${GITHUB_SHA::8} \
+            --source-bundle S3Bucket=$(aws s3 mb s3://$GITHUB_REPOSITORY-$(date +%s) | awk '{print $3}')/flask-docker-eb.zip \
+            --auto-create-application
+
+          aws elasticbeanstalk update-environment \
+            --environment-name ${{ secrets.EB_ENVIRONMENT_NAME }} \
+            --version-label v-${GITHUB_SHA::8}
