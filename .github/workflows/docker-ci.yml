@@ -39,3 +39,6 @@ jobs:
           aws elasticbeanstalk update-environment \
             --environment-name ${{ secrets.EB_ENVIRONMENT_NAME }} \
             --version-label v-${GITHUB_SHA::8}
+
+
+
