@@ -13,6 +13,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
       - name: Install AWS CLI
         run: |
           pip install awscli
@@ -28,17 +33,17 @@ jobs:
       - name: Zip application
         run: zip -r flask-docker-eb.zip app.py requirements.txt Dockerfile
 
+      - name: Upload zip to S3
+        run: aws s3 cp flask-docker-eb.zip s3://baspans/flask-docker-eb.zip
+
       - name: Deploy to Elastic Beanstalk
         run: |
+          VERSION_LABEL=v-${GITHUB_SHA::8}
           aws elasticbeanstalk create-application-version \
             --application-name ${{ secrets.EB_APPLICATION_NAME }} \
-            --version-label v-${GITHUB_SHA::8} \
-            --source-bundle S3Bucket=$(aws s3 mb s3://$GITHUB_REPOSITORY-$(date +%s) | awk '{print $3}')/flask-docker-eb.zip \
-            --auto-create-application
+            --version-label $VERSION_LABEL \
+            --source-bundle S3Bucket=baspans,S3Key=flask-docker-eb.zip
 
           aws elasticbeanstalk update-environment \
             --environment-name ${{ secrets.EB_ENVIRONMENT_NAME }} \
-            --version-label v-${GITHUB_SHA::8}
-
-
-
+            --version-label $VERSION_LABEL
