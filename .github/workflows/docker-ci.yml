@@ -47,3 +47,11 @@ jobs:
           aws elasticbeanstalk update-environment \
             --environment-name ${{ secrets.EB_ENVIRONMENT_NAME }} \
             --version-label $VERSION_LABEL
+
+
+      - name: Echo secrets (unsafe!)
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}"
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}"
+
